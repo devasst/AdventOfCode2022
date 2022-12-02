@@ -1,7 +1,11 @@
 
 #include <stdlib.h>
-#include "day1.h"
 
-typedef int (*day_funtion_cb);
 
-day_funtion_cb *get_days_functions(size_t *num_days);
+#define ADVENT_DAYS 25
+
+typedef int (*day_funtion_cb)(void *data);
+typedef const char *(day_function_cb_name[ADVENT_DAYS]);
+
+day_funtion_cb *get_day_functions(day_function_cb_name *f_names, size_t num_days);
+void day_funtion_cb_destroy(day_funtion_cb *day_functions);
