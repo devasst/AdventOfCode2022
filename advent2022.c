@@ -13,10 +13,10 @@ static int _menu(day_funtion_cb *day_functions, char **day_functions_names, size
     printf("--------------------------------------\n");
     printf("0. Exit\n");
 
-    for(int i = 0; i < num_days; i++){
+    for(int i = 0; i < num_days; ++i){
         printf("%u. %s\n", i+1, day_functions_names[i]);
     }
-    printf("Option:\n");
+    printf("Option:");
 
     scanf("%d", &opt);
     return opt;
@@ -24,7 +24,7 @@ static int _menu(day_funtion_cb *day_functions, char **day_functions_names, size
 
 int main(int argc, char *argv[]) {
 
-    size_t num_days = 1;
+    size_t num_days = 2;
     day_function_cb_name day_functions_names;
     day_funtion_cb *day_functions = get_day_functions(&day_functions_names, num_days);
 
