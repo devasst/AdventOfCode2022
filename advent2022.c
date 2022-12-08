@@ -24,14 +24,13 @@ static int _menu(day_funtion_cb *day_functions, char **day_functions_names, size
 
 int main(int argc, char *argv[]) {
 
-    size_t num_days = 2;
     day_function_cb_name day_functions_names;
-    day_funtion_cb *day_functions = get_day_functions(&day_functions_names, num_days);
+    day_funtion_cb *day_functions = get_day_functions(&day_functions_names, IMPLEMENTED_ADVENT_DAYS);
 
     int opt = -1;
     while (opt != 0) {
-        opt = _menu(day_functions, (char**)day_functions_names, num_days);
-        if(opt > 0 && opt <= num_days){
+        opt = _menu(day_functions, (char**)day_functions_names, IMPLEMENTED_ADVENT_DAYS);
+        if(opt > 0 && opt <= IMPLEMENTED_ADVENT_DAYS){
             day_functions[opt-1](NULL);
         }
     }

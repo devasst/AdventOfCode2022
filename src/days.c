@@ -1,16 +1,24 @@
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "../include/days.h"
 
 
 day_function_cb_name __f_names = {
     "Calorie Counting",
-    "Rock-Paper-Scissors"
+    "Rock-Paper-Scissors",
+    "Rucksack Reorganization"
 };
 
 //General
+
+#define SET_BIT(p, n) ( (p) |= ( (1U) << (n) ) )
+#define CLEAR_BIT(p, n) ( (p) &= ~( (1U) << (n) ) )
+#define TOGGLE_BIT(p, n) ( (p) ^= ( (1U) << (n) ) )
+#define CHECK_BIT(p, n) ( ((p) >> (n)) & (1U) )
 
 static char *__read_file_to_char(const char *filepath){
     FILE *fp = fopen(filepath, "r");
@@ -250,16 +258,151 @@ static int __day2_rock_paper_scissors(void *data){
     return 0;
 }
 
+//Day3
+#define ALPHABET_MAYUS_NUMBER 26
+#define ALPHABET_MINUS_NUMBER 26
+#define ALPHABET_MAYUS_OFFSET 65 // A-Z (0-25)
+#define ALPHABET_MINUS_OFFSET (97 - ALPHABET_MAYUS_NUMBER) // a-z (26-51)
+#define FOUND_ALPHABET_FIRST_HALF 0x01
+#define FOUND_ALPHABET_SECOND_HALF 0x02
+#define ALPHABET_MAYUS_PRIORITY 27
+#define ALPHABET_MINUS_PRIORITY 1
+#define FOUND_BADGE1 0x01
+#define FOUND_BADGE2 0x02
+#define FOUND_BADGE3 0x04
+
+static int __day3_rucksack_reorganization(void *data){
+    size_t items_size = 0;
+    char **items = __read_file_char_lines("../data/input3.txt", &items_size);
+    uint8_t found_alphabet[ALPHABET_MAYUS_NUMBER+ALPHABET_MINUS_NUMBER] = {0}; // A-Z (0-25) + a-z (26-51)
+    int total_item_in_both_compartments_prio = 0, total_badge_prio = 0;
+    uint8_t group_member_mask = FOUND_BADGE1;
+
+    //Puzzle 1
+    for(int i = 0 ; i < items_size; ++i){
+        size_t half_size = strlen(items[i]) / 2;
+        char item_in_both_compartments = 0;
+        int item_in_both_compartments_prio = 0;
+        memset(found_alphabet, 0, ALPHABET_MAYUS_NUMBER+ALPHABET_MINUS_NUMBER);
+        //printf("%.*s - %.*s \n", (int)half_size, items[i], (int)half_size, items[i]+half_size);
+
+        for( int j = 0; j < half_size; ++j){
+            int found_alphabet_index = 0;
+            //First half
+            if(items[i][j] >= 'A' && items[i][j] <= 'Z'){
+                found_alphabet_index = items[i][j] - ALPHABET_MAYUS_OFFSET;
+            }else if (items[i][j] >= 'a' && items[i][j] <= 'z'){
+                found_alphabet_index = items[i][j] - ALPHABET_MINUS_OFFSET;
+            }
+
+            if(CHECK_BIT(found_alphabet[found_alphabet_index], FOUND_ALPHABET_SECOND_HALF)){
+                item_in_both_compartments = items[i][j];
+                item_in_both_compartments_prio = found_alphabet_index < ALPHABET_MAYUS_NUMBER 
+                                                 ? found_alphabet_index + ALPHABET_MAYUS_PRIORITY 
+                                                 : found_alphabet_index + ALPHABET_MINUS_PRIORITY - ALPHABET_MAYUS_NUMBER;
+                break;
+            }
+            if (!CHECK_BIT(found_alphabet[found_alphabet_index], FOUND_ALPHABET_FIRST_HALF)){
+                found_alphabet[found_alphabet_index] = SET_BIT(found_alphabet[found_alphabet_index], FOUND_ALPHABET_FIRST_HALF);
+            }
+
+            //Second half
+            if(items[i][j+half_size] >= 'A' && items[i][j+half_size] <= 'Z'){
+                found_alphabet_index = items[i][j+half_size] - ALPHABET_MAYUS_OFFSET;
+            }else if (items[i][j+half_size] >= 'a' && items[i][j+half_size] <= 'z'){
+                found_alphabet_index = items[i][j+half_size] - ALPHABET_MINUS_OFFSET;
+            }
+
+            if(CHECK_BIT(found_alphabet[found_alphabet_index], FOUND_ALPHABET_FIRST_HALF)){
+                item_in_both_compartments = items[i][j+half_size];
+                item_in_both_compartments_prio = found_alphabet_index < ALPHABET_MAYUS_NUMBER 
+                                                 ? found_alphabet_index + ALPHABET_MAYUS_PRIORITY 
+                                                 : found_alphabet_index + ALPHABET_MINUS_PRIORITY - ALPHABET_MAYUS_NUMBER;                
+                break;
+            }
+            if (!CHECK_BIT(found_alphabet[found_alphabet_index], FOUND_ALPHABET_SECOND_HALF)){
+                found_alphabet[found_alphabet_index] = SET_BIT(found_alphabet[found_alphabet_index], FOUND_ALPHABET_SECOND_HALF);
+            }
+        }
+        //printf("Double item: %c -> %d with priority %u\n", item_in_both_compartments, item_in_both_compartments, item_in_both_compartments_prio);
+        total_item_in_both_compartments_prio += item_in_both_compartments_prio;
+    }
+    printf("PUZZLE1: Double item total priority -> %u\n", total_item_in_both_compartments_prio);
+
+    //Puzzle 2
+    for(int i = 0 ; i < items_size; ++i){
+        size_t item_size = strlen(items[i]);
+        char badge_item = 0;
+        int badge_item_prio = 0;
+        
+        if( i % 3 == 0){
+            //reset for each group of 3
+            memset(found_alphabet, 0, ALPHABET_MAYUS_NUMBER+ALPHABET_MINUS_NUMBER);
+            group_member_mask = FOUND_BADGE1;
+        }
+
+        for( int j = 0; j < item_size; ++j){
+            int found_alphabet_index = 0;
+            if(items[i][j] >= 'A' && items[i][j] <= 'Z'){
+                found_alphabet_index = items[i][j] - ALPHABET_MAYUS_OFFSET;
+            }else if (items[i][j] >= 'a' && items[i][j] <= 'z'){
+                found_alphabet_index = items[i][j] - ALPHABET_MINUS_OFFSET;
+            }else{
+                continue;
+            }
+
+            if(!CHECK_BIT(found_alphabet[found_alphabet_index], group_member_mask)){
+                found_alphabet[found_alphabet_index] = SET_BIT(found_alphabet[found_alphabet_index], group_member_mask);
+            }
+
+            if( CHECK_BIT(found_alphabet[found_alphabet_index], FOUND_BADGE1) && 
+                CHECK_BIT(found_alphabet[found_alphabet_index], FOUND_BADGE2) && 
+                CHECK_BIT(found_alphabet[found_alphabet_index], FOUND_BADGE3) ){
+                badge_item = items[i][j];
+                badge_item_prio =   found_alphabet_index < ALPHABET_MAYUS_NUMBER 
+                                    ? found_alphabet_index + ALPHABET_MAYUS_PRIORITY 
+                                    : found_alphabet_index + ALPHABET_MINUS_PRIORITY - ALPHABET_MAYUS_NUMBER;
+                //printf("Badge item: %c -> %d with priority %u\n", badge_item, badge_item, badge_item_prio);
+                total_badge_prio += badge_item_prio;
+                break;
+            }
+        }
+
+        switch (group_member_mask) {
+            case FOUND_BADGE1:
+                group_member_mask = FOUND_BADGE2;
+                break;
+            case FOUND_BADGE2:
+                group_member_mask = FOUND_BADGE3;
+                break;
+            case FOUND_BADGE3:
+            default:
+                group_member_mask = FOUND_BADGE1;
+                break;
+        }
+
+        free(items[i]); //free to avoid another loop just to destroy
+    }
+    printf("PUZZLE2: Badge item total priority -> %u\n", total_badge_prio);
+
+    free(items);
+
+    
+    return 0;
+}
+
 //TODO: think about [char*] of [const char*]
 day_funtion_cb *get_day_functions(day_function_cb_name *f_names, size_t num_days){
      // Day function callback names
     (*f_names)[0] = __f_names[0];
     (*f_names)[1] = __f_names[1];
+    (*f_names)[2] = __f_names[2];
 
     // Day function callback functions
     day_funtion_cb *day_functions = calloc(num_days, sizeof(day_funtion_cb));
     day_functions[0] = __day1_calorie_counting;
     day_functions[1] = __day2_rock_paper_scissors;
+    day_functions[2] = __day3_rucksack_reorganization;
     return day_functions;
 }
 

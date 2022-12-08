@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 
-
+#define IMPLEMENTED_ADVENT_DAYS 3
 #define MAX_ADVENT_DAYS 25
 
 typedef int (*day_funtion_cb)(void *data);
