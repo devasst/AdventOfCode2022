@@ -10,7 +10,8 @@
 day_function_cb_name __f_names = {
     "Calorie Counting",
     "Rock-Paper-Scissors",
-    "Rucksack Reorganization"
+    "Rucksack Reorganization",
+    "Camp Cleanup"
 };
 
 //General
@@ -391,18 +392,62 @@ static int __day3_rucksack_reorganization(void *data){
     return 0;
 }
 
+//Day4
+typedef struct __day4_clean_range_s{
+    uint8_t from;
+    uint8_t to;
+    uint8_t overlapped;
+} __day4_clean_range_t;
+
+static int __day4_camp_cleanup(void *data){
+    size_t items_number = 0;
+    char **items = __read_file_char_lines("../data/input4.txt", &items_number);
+    int overlapped_ranges = 0;
+
+    for(int i = 0; i < items_number; ++i){
+        __day4_clean_range_t member1, member2;
+        sscanf(items[i], "%hhu-%hhu,%hhu-%hhu", &member1.from, &member1.to, &member2.from, &member2.to);
+        if( (member1.from >= member2.from && member1.to <= member2.to) || 
+            (member2.from >= member1.from && member2.to <= member1.to) ){
+            overlapped_ranges++;
+        }
+    }
+    printf("PUZZLE1: Pair Overlapped ranges -> %d\n", overlapped_ranges);
+
+
+    overlapped_ranges = 0;
+    for(int i = 0; i < items_number; ++i){
+        __day4_clean_range_t member1, member2, member3, member4;
+
+        sscanf(items[i], "%hhu-%hhu,%hhu-%hhu", &member1.from, &member1.to, &member2.from, &member2.to);
+
+        if( (member1.from >= member2.from && member1.from <= member2.to) || 
+            (member1.to >= member2.from && member1.to <= member2.to) || 
+            (member2.from >= member1.from && member2.from <= member1.to) ||
+            (member2.to >= member1.from && member2.to <= member1.to) ){
+            overlapped_ranges++;
+        }
+        free(items[i]);
+    }
+    free(items);
+
+    printf("PUZZLE2: Total Overlapped ranges -> %u\n", overlapped_ranges);
+    return 0;
+}
+
 //TODO: think about [char*] of [const char*]
 day_funtion_cb *get_day_functions(day_function_cb_name *f_names, size_t num_days){
      // Day function callback names
-    (*f_names)[0] = __f_names[0];
-    (*f_names)[1] = __f_names[1];
-    (*f_names)[2] = __f_names[2];
+     for(int i = 0; i < num_days; ++i){
+        (*f_names)[i] = __f_names[i];
+     }
 
     // Day function callback functions
     day_funtion_cb *day_functions = calloc(num_days, sizeof(day_funtion_cb));
     day_functions[0] = __day1_calorie_counting;
     day_functions[1] = __day2_rock_paper_scissors;
     day_functions[2] = __day3_rucksack_reorganization;
+    day_functions[3] = __day4_camp_cleanup;
     return day_functions;
 }
 
