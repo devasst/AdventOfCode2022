@@ -4,14 +4,17 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+
 #include "../include/days.h"
+#include "../include/stack.h"
 
 
 day_function_cb_name __f_names = {
     "Calorie Counting",
     "Rock-Paper-Scissors",
     "Rucksack Reorganization",
-    "Camp Cleanup"
+    "Camp Cleanup",
+    "Supply Stacks"
 };
 
 //General
@@ -81,7 +84,6 @@ static char **__read_file_char_lines(const char *filepath, size_t *line_number){
 }
 
 //Day1
-
 static int __day1_calorie_counting(void *data){
     int max_calories[3] = {0}, actual_calories = 0;
     size_t number_lines = 0;
@@ -123,7 +125,6 @@ int RPS_selection_score[3] = {1, 2, 3}; //{rock, paper, scissors
 #define RPS_DRAW_INDEX 1
 #define RPS_WIN_INDEX 2
 int RPS_result_score[3] = {0, 3, 6}; //{loss, draw, win}
-
 
 static int __rock_paper_scissors_to_index(char selection){
     switch (selection){
@@ -435,6 +436,136 @@ static int __day4_camp_cleanup(void *data){
     return 0;
 }
 
+//Day5
+#define CrateMover9000 0
+#define CrateMover9001 1
+
+static void __day5_stack_add_crate(stack_t *stack, char crate_ID){
+    if(stack == NULL){
+        return;
+    }
+    char *ID = (char*)calloc(2, sizeof(char));
+    ID[0] = crate_ID;
+    stack_push_node(stack, ID);
+}
+
+static char __day5_stack_pop_crate(stack_t *stack){
+    if(stack == NULL){
+        return '\0';
+    }
+    stack_node_t *node = stack_pop_node(stack);
+    char ret = *((char*)stack_node_get_value(node));
+    stack_destroy_node(stack, node);
+    return ret;
+}
+
+static void __day5_stack_move_crate_CrateMover9000(stack_t *stack_from, stack_t *stack_to){
+    char crate_to_move = __day5_stack_pop_crate(stack_from);
+    __day5_stack_add_crate(stack_to, crate_to_move);
+}
+
+static void __day5_stack_move_crate_CrateMover9001(stack_t *stack_from, stack_t *stack_to, int num_crates_to_move){
+    char *crates_to_move = (char*)calloc(num_crates_to_move, sizeof(char));
+    for(int i = num_crates_to_move-1; i >= 0; --i){
+        char crate_to_move = __day5_stack_pop_crate(stack_from);
+        crates_to_move[i] = crate_to_move;
+    }
+    for(int i = 0; i < num_crates_to_move; ++i){
+        __day5_stack_add_crate(stack_to, crates_to_move[i]);
+    }
+    free(crates_to_move);
+}
+
+static int __day5_supply_stacks(void *data){
+    size_t lines_number = 0;
+    char **content_lines = __read_file_char_lines("../data/input5.txt", &lines_number);
+
+    int stacks_number = 0, i = 0;
+
+    //FIXME: define which CrateMover is used
+    // - CrateMover9000: one crate by one
+    // - CrateMover9001: multiple crates at once
+    int model_CrateMover = CrateMover9001;
+
+    //Get initial stacks and crate positions
+    for(i = 0; i < lines_number; ++i){
+        if(strstr(content_lines[i], "[") != NULL){
+            continue;
+        }
+        
+        char *line = strdup(content_lines[i]), *p_line = line, *stack;
+        while( (stack = strtok_r(line, " ", &line)) != NULL){
+            int stack_num = atoi(stack);
+            if(stack_num > stacks_number){
+                stacks_number = stack_num;
+            }
+        }
+        free(p_line);
+        break;
+    }
+    printf("Number of Stacks: %d\n", stacks_number);
+    stack_t **stacks = (stack_t**)calloc(stacks_number, sizeof(stack_t*));
+    for(int j = 0; j < stacks_number; ++j){
+        stacks[j] = stack_new(free);
+    }
+    for(int j = i - 1; j >= 0; --j){
+        int cID_offset = 1; // '['
+        int cIDX = 0;
+        //printf("Row %d of crates: %s\n", j, content_lines[j]);
+        while(cID_offset < strlen(content_lines[j])){
+            if(content_lines[j][cID_offset] >= 'A' && content_lines[j][cID_offset] <= 'Z'){
+                __day5_stack_add_crate(stacks[cIDX], content_lines[j][cID_offset]);
+                //printf("Added crate %c to stack %d\n", content_lines[j][cID_offset], cIDX);
+            }
+            cID_offset += 4; // 'ID' + ']' + ' ' + '['
+            ++cIDX;
+        }
+    }
+
+    //Follow instructions and move crates
+    size_t lenght_min = strlen("move X from Y to Z");
+    int instruction_number = 1;
+    for(int k = i+1; k < lines_number; ++k){
+        if(strlen(content_lines[k]) < lenght_min){
+            continue;
+        }
+        //printf("Instruction %d -> %s", instruction_number++, content_lines[k]);
+        int crates_to_move = 0, stack_from = -1, stack_to = -1;
+        sscanf(content_lines[k], "move %d from %d to %d\n", &crates_to_move, &stack_from, &stack_to);
+        if(stack_from != -1 && stack_to != -1 && crates_to_move > 0){
+            if(model_CrateMover == CrateMover9000){
+                for(int crate = 0; crate < crates_to_move ; ++crate){
+                    __day5_stack_move_crate_CrateMover9000(stacks[stack_from-1], stacks[stack_to-1]);
+                    //printf("Moved 1 from %d to %d\n", stack_from, stack_to);
+                }
+            }else if(model_CrateMover == CrateMover9001){
+                __day5_stack_move_crate_CrateMover9001(stacks[stack_from-1], stacks[stack_to-1], crates_to_move);
+                //printf("Moved %d from %d to %d\n", crates_to_move, stack_from, stack_to);
+            }
+        }
+    }
+
+    //Print upper crates
+    char *upper_crates_ID = (char*)calloc(stacks_number+1, sizeof(char));
+    for(int j = 0; j < stacks_number; ++j){
+        upper_crates_ID[j] = __day5_stack_pop_crate(stacks[j]);
+    }
+    printf("%s: Upper Crates IDs -> %s\n", model_CrateMover == CrateMover9000 ? "PUZZLE1" : "PUZZLE2", upper_crates_ID);
+    free(upper_crates_ID);
+
+    //Clean and destroy
+    for(int j = 0; j < stacks_number; ++j){
+        stack_destroy(stacks[j]);
+    }
+    free(stacks);
+    for(i = 0; i < lines_number; ++i){
+        free(content_lines[i]);
+    }
+    free(content_lines);
+
+    return 0;
+}
+
 //TODO: think about [char*] of [const char*]
 day_funtion_cb *get_day_functions(day_function_cb_name *f_names, size_t num_days){
      // Day function callback names
@@ -448,6 +579,7 @@ day_funtion_cb *get_day_functions(day_function_cb_name *f_names, size_t num_days
     day_functions[1] = __day2_rock_paper_scissors;
     day_functions[2] = __day3_rucksack_reorganization;
     day_functions[3] = __day4_camp_cleanup;
+    day_functions[4] = __day5_supply_stacks;
     return day_functions;
 }
 
